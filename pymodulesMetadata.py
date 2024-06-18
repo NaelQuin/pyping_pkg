@@ -7,7 +7,7 @@ __email__ = "natanael.quintino@ipiaget.pt"
 
 def generateMetadata(
         autor=__author__,
-        email=__email_,
+        email=__email__,
         description="",
         version="0.1.0"
         ) -> (dict[str: str]):
