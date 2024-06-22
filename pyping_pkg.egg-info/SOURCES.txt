@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+pyping_pkg/__init__.py
+pyping_pkg/scriptsText.py
+pyping_pkg.egg-info/PKG-INFO
+pyping_pkg.egg-info/SOURCES.txt
+pyping_pkg.egg-info/dependency_links.txt
+pyping_pkg.egg-info/requires.txt
+pyping_pkg.egg-info/top_level.txt

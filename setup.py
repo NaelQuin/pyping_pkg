@@ -1,15 +1,14 @@
-
 from setuptools import setup, find_packages
 
 MODULE = "pyping_pkg"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 LONG_DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 AUTHOR = "Natanael Quintino"
 AUTHOR_EMAIL = "natanael.quintino@ipiaget.pt"
 LICENSE = "MIT License"
-REQUIREMENTS = ""
-KEYWORDS = "PyPI, automation, install, packages, module"
+REQUIREMENTS = "'build', 'twine'"
+KEYWORDS = "pypi, automation, install, packages, module"
 
 setup(
     name=MODULE,
@@ -21,10 +20,10 @@ setup(
     license=LICENSE,
     packages=find_packages(
         include=[MODULE, MODULE+'.*']
-        ),
-    install_requires=[
-        REQUIREMENTS
-    ],
+    ),
+    install_requires=eval('''[
+        %s
+    ]''' % REQUIREMENTS),
     keywords=KEYWORDS,
     classifiers= [
         "Intended Audience :: Developers",

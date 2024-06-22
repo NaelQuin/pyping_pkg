@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: pyping-pkg
+Version: 0.1.1
+Summary: Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions.
+Home-page: UNKNOWN
+Author: Natanael Quintino
+Author-email: natanael.quintino@ipiaget.pt
+License: MIT License
+Keywords: pypi,automation,install,packages,module
+Platform: UNKNOWN
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+License-File: LICENSE
+
+Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions.
+

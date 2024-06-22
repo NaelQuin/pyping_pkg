@@ -23,10 +23,10 @@ setupScript = """
         license=LICENSE,
         packages=find_packages(
             include=[MODULE, MODULE+'.*']
-            ),
-        install_requires=[
-            REQUIREMENTS
-        ],
+        ),
+        install_requires=eval('''[
+            %s
+        ]''' % REQUIREMENTS),
         keywords=KEYWORDS,
         classifiers= [
             "Intended Audience :: Developers",
@@ -41,12 +41,12 @@ tomlScript = """
     build-backend = "setuptools.build_meta"
 
     [project]
-    name = "{module}"
+    name = "%(module)s"
     version = "0.0.0"
     authors = [
-        %(lbrace)sname="{author}", email="{author_email}"%(rbrace)s,
+        { name="%(author)s", email="%(author_email)s" },
     ]
-    description = "{description}"
+    description = "%(description)s"
     readme = "README.md"
     requires-python = ">=3.8"
     classifiers = [
@@ -56,8 +56,8 @@ tomlScript = """
     ]
 
     [project.urls]
-    "Homepage" = "https://github.com/{githubUserName}/{module}"
-    "Bug Tracker" = "https://github.com/{githubUserName}/{module}/issues"
+    "Homepage" = "https://github.com/{githubUserName}/%(module)s"
+    "Bug Tracker" = "https://github.com/{githubUserName}/%(module)s/issues"
 """.replace("\n    ", "\n")
 
 

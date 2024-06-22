@@ -11,22 +11,56 @@ Pyping_pkg
 Best regards from Natanael Quintino
 """
 
-__all__ = [
-    "exists", "getVersions", "uploadPackage", "pyping",
-    "buildProject"
-    ]
-
 import os
 import re
+import sys
 import requests
 from .scriptsText import setupScript, tomlScript, mitLicenseScript, readmeScript
+from metadata import metadata
+
+
+__version__ = "0.1.1"
+__all__ = [
+    "exists", "getVersions", "uploadPackage", "buildProject",
+    "pyping"
+    ]
+
+
+def prepareRequirements(requirements: str) -> (str):
+    requirements = requirements.split(",")
+    for i, req in enumerate(requirements):
+        requirements[i] = f"'{req.strip()}'"
+    return ", ".join(requirements)
+
+
+def getKey(dic, key, func, *args):
+    value = dic[key]\
+        if key in dic\
+        else func(*args)
+    return value
+
+
+def getMaintainers(package: str) -> (bool):
+    response = requests.get(f"https://pypi.org/project/{package}/#data")
+
+    MAINTAINERS = maintainers = set(
+        re.findall(
+            "\<span class=\"sidebar-section__user-gravatar-text\"\>\s*(.*)\s*\</span\>",
+            response.text
+        )
+    )
+
+    return maintainers
+
 
 def exists(package: str, verbose: bool = False) -> (bool):
+    global VERSIONS
+
     response = requests.get(f"https://pypi.org/project/{package}")
     unavailable = response.status_code == 200
     if unavailable and verbose:
         print(
-        f"Unfortunately, '{package}' already exists in the Pypi repository."
+        f"\nUnfortunately, '{package}' already exists in the Pypi repository. In following versions:\n\t{VERSIONS}\n"
         )
     elif verbose:
         print(
@@ -36,40 +70,77 @@ def exists(package: str, verbose: bool = False) -> (bool):
     return unavailable
 
 
+def maintainerCheck(package: str) -> (bool):
+    maintainers = getMaintainers(package)
+
+    answer = input(
+        f"You belong to the group of package maintainers? (y/N) ")
+
+    output = answer.lower() == 'y'
+
+    return output
+
+
 def getVersions(package) -> (list[str]):
+    global VERSIONS
+
     response = requests.get(f"https://pypi.org/project/{package}/#history")
 
-    versions = re.findall(
+    VERSIONS = versions = re.findall(
         "\<p class=\"release__version\"\>\s*(.*)\s*\<\/p\>",
         response.text
     )
 
-    # # Get lines from response text content
-    # contentLines = response.text.split("\n")
-
-    # # Get versions index on contentLines
-    # versionsIdx = [
-    #     i+1 for i, t in enumerate(contentLines)
-    #         if '<p class="release__version">' in t
-    # ]
-
-    # # Get versions from contentLines
-    # versions = [contentLines[i].strip() for i in versionsIdx]
-
     return versions
 
 
-def generateSetup(path) -> (None):
+def generateSetup(package, path) -> (None):
     """Generate setup.py file"""
 
-    while exists(module:=input("Type the pymodule name: "), verbose=True):
-        pass
-    description      = input("           description: ")
-    author           = input("           author name: ")
-    author_email     = input("          author email: ")
-    license          = input("               license: ")
-    requirements     = input(" packages requirements: ")
-    keywords         = input("              keywords: ")
+    printed = False
+    while exists(package, verbose=True):
+        package=input("Type the pypackage name: ")
+        printed = True
+
+    if not printed:
+        print("Type the pypackage ", end="")
+
+    description = getKey(
+        metadata[package],
+        "description",
+        input,
+        "           description: "
+    )
+    author = getKey(
+        metadata[package],
+        "author",
+        input,
+        "           author name: "
+    )
+    author_email = getKey(
+        metadata[package],
+        "author_email",
+        input,
+        "          author email: "
+    )
+    license = getKey(
+        metadata[package],
+        "license",
+        input,
+        "               license: "
+    )
+    requirements = getKey(
+        metadata[package],
+        "requirements",
+        input,
+        " packages requirements: "
+    )
+    keywords = getKey(
+        metadata[package],
+        "keywords",
+        input,
+        "              keywords: "
+    )
     long_description = description
 
     path = path.rstrip("/")
@@ -83,50 +154,97 @@ def generateSetup(path) -> (None):
     with open("{path}/setup.py", "x") as f:
         f.write(
             setupScript.format(
-                module=module, description=description, long_description=long_description, author=author, author_email=author_email, license=license, requirements=requirements, keywords=keywords
+                package=package, description=description,
+                long_description=long_description, author=author,
+                author_email=author_email, license=license,
+                requirements=prepareRequirements(requirements),
+                keywords=keywords,
             )
         )
 
     return None
 
 
-def generateToml(path) -> (None):
-    """Generate pymodule.toml file"""
+def generateToml(package, path) -> (None):
+    """Generate <package>.toml file"""
 
-    while exists(module:=input("Type the pymodule name: "), verbose=True):
-        pass
-    description    = input("     description: ")
-    author         = input("     author name: ")
-    author_email   = input("    author email: ")
-    license        = input("         license: ")
-    githubUserName = input(" github UserName: ")
+    printed = False
+    while exists(package, verbose=True):
+        package=input("Type the pypackage name: ")
+        printed = True
+
+    if not printed:
+        print("Type the pypackage ", end="")
+
+    description = getKey(
+        metadata[package],
+        "description",
+        input,
+        "     description: "
+    )
+    author = getKey(
+        metadata[package],
+        "author",
+        input,
+        "     author name: "
+    )
+    author_email = getKey(
+        metadata[package],
+        "author_email",
+        input,
+        "    author email: "
+    )
+    license = getKey(
+        metadata[package],
+        "license",
+        input,
+        "         license: "
+    )
+    githubUserName = getKey(
+        metadata[package],
+        "githubUserName",
+        input,
+        " github UserName: "
+    )
 
     path = path.rstrip("/")
 
-    if f"{module}.toml" in os.listdir(path):
-        print(f"{module}.toml already exists!")
-        answer = input(f"Do you wanna update '{module}.toml'? (Y/n) ")
+    if f"{package}.toml" in os.listdir(path):
+        print(f"{package}.toml already exists!")
+        answer = input(f"Do you wanna update '{package}.toml'? (Y/n) ")
         if "n" in answer.lower():
             return None
 
-    with open("{path}/{module}.toml", "w") as f:
+    with open("{path}/{package}.toml", "w") as f:
         f.write(
-            tomlScript.format(
-                module=module, description=description,
-                author=author, author_email=author_email,
-                license=license, githubUserName=githubUserName
-            ) % {"lbrace": "{", "rbrace": "}"}
+            tomlScript % {
+                "module": package,
+                "author": author,
+                "author_email": author_email,
+                "description": description,
+            }
         )
 
     return None
 
 
-def generateReadme(path) -> (None):
+def generateReadme(package, path) -> (None):
     """Generate README.md file"""
 
-    while exists(module:=input("Type the pymodule name: "), verbose=True):
-        pass
-    description    = input("     description: ")
+    printed = False
+    while exists(package, verbose=True):
+        package=input("Type the pypackage name: ")
+        printed = True
+
+    if not printed:
+        print("Type the pypackage ", end="")
+
+    description = getKey(
+        metadata[package],
+        "description",
+        input,
+        "     description: "
+    )
 
     path = path.rstrip("/")
 
@@ -139,17 +257,22 @@ def generateReadme(path) -> (None):
     with open("{path}/README.md", "w") as f:
         f.write(
             readmeScript.format(
-                module=module, description=description
+                module=package, description=description
             )
         )
 
     return None
 
 
-def generateMitLicense(path) -> (None):
+def generateMitLicense(package, path) -> (None):
     """Generate LICENSE file"""
 
-    author         = input("Type the pymodule author name: ")
+    author = getKey(
+        metadata[package],
+        "author",
+        input,
+        "Type the pypackage author name: "
+    )
 
     path = path.rstrip("/")
 
@@ -169,23 +292,67 @@ def generateMitLicense(path) -> (None):
     return None
 
 
-def generateAllFiles(module, version, path):
-    """Generate setup.py, pymodule.toml, README.md and LICENSE files"""
+def generateAllFiles(package, path):
+    """Generate setup.py, <package>.toml, README.md and LICENSE files"""
 
-    while exists(module, verbose=True):
-        module=input("Type the pymodule name: ")
-    description      = input("Type the pymodule description: ")
-    author           = input("                  author name: ")
-    author_email     = input("                 author email: ")
-    license          = input("                      license: ")
-    requirements     = input("        packages requirements: ")
-    keywords         = input("                     keywords: ")
-    githubUserName   = input("              github UserName: ")
+    getVersions(package)
+
+    printed = False
+    while exists(package, verbose=True):
+        package=input("Type the pypackage name: ")
+        printed = True
+
+    if not printed:
+        print("Type the pypackage ", end="")
+
+    description = getKey(
+        metadata[package],
+        "description",
+        input,
+        "                  description: "
+    )
+    author = getKey(
+        metadata[package],
+        "author",
+        input,
+        "                  author name: "
+    )
+    author_email = getKey(
+        metadata[package],
+        "author_email",
+        input,
+        "                 author email: "
+    )
+    license = getKey(
+        metadata[package],
+        "license",
+        input,
+        "                      license: "
+    )
+    requirements = getKey(
+        metadata[package],
+        "requirements",
+        input,
+        "        packages requirements: "
+    )
+    keywords = getKey(
+        metadata[package],
+        "keywords",
+        input,
+        "                     keywords: "
+    )
+    githubUserName = getKey(
+        metadata[package],
+        "githubUserName",
+        input,
+        "              github UserName: "
+    )
     long_description = description
 
+    # Remove / from path
     path = path.rstrip("/")
 
-    for fileName in ["setup.py", f"{module}.toml", "README.md", "LICENSE"]:
+    for fileName in ["setup.py", f"{package}.toml", "README.md", "LICENSE"]:
 
         if fileName in os.listdir(path):
             print(f"'{fileName}' already exists!")
@@ -195,7 +362,7 @@ def generateAllFiles(module, version, path):
 
         script = {
             "setup.py": setupScript,
-            f"{module}.toml": tomlScript,
+            f"{package}.toml": tomlScript,
             "README.md": readmeScript,
             "LICENSE": mitLicenseScript
         }[fileName]
@@ -205,74 +372,116 @@ def generateAllFiles(module, version, path):
         # input("HERE")
 
         with open(f"{path}/{fileName}", "w") as f:
-            # Formatting file text content
-            script = script.format(
-                    module=module, description=description, long_description=long_description, author=author, author_email=author_email, license=license, requirements=requirements, keywords=keywords,
-                    githubUserName=githubUserName
-                ) % {"lbrace": "{", "rbrace": "}"}
-
-            # Write content on file
-            f.write(script)
 
             if fileName.endswith(".toml"):
-                # Make structural adjustments
-                script % {"lbrace": "{", "rbrace": "}"}
+                # Formattin toml file
+                script = script % {
+                    "module": package,
+                    "author": author,
+                    "author_email": author_email,
+                    "description": description,
+                }
+
+            else:
+                # Formatting file text content
+                script = script.format(
+                        module=package, description=description,
+                        long_description=long_description, author=author,
+                        author_email=author_email, license=license,
+                        requirements=prepareRequirements(requirements),
+                        keywords=keywords, githubUserName=githubUserName
+                    )
+
+            # Write content on file
+            f.write(
+                script.strip("\t\n ")
+            )
 
     return None
 
 
 def buildProject(
-        module: str = None,
+        package: str = None,
         version: str = None,
         path: str = None
         ) -> (None):
+    global VERSIONS
 
-    if module is None or exists(module, verbose=True):
-        while exists(module:=input("Type the pymodule name: "), verbose=True):
+    if package is None or exists(package, verbose=True):
+        while exists(package:=input("Type the pypackage name: "), verbose=True):
             pass
-    versions = getVersions(module)
+    versions = getVersions(package)\
+        if "VERSIONS" not in globals() or not any(VERSIONS)\
+        else VERSIONS
     if version is None or version in versions:
-        while (version:=input("Type the pymodule version: ").strip(" .")) in versions:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in versions:
             pass
+        updateVersion(package, version, path)
     if path is None:
-        path = input("Type the pymodule main path: ")
+        path = input("Type the pypackage main path: ")
 
     path = "."\
         if not any(path)\
         else path.rstrip(r"/")
 
-    module = module.lower().replace("-","_")
-    for file, toChange in [(f"{path}/setup.py", "VERSION = "),
-                 (f"{path}/{module}.toml", "version = "),
-                 (f"{path}/{module}/__init__.py", "__version__ = ")]:
-        with open(file, "r+") as f:
-            content = f.readlines()
-            for i, c in enumerate(content):
-                if toChange in c:
-                    pos = c.find('"')
-                    content[i] = c[:pos+1] + version + '"\n'
-                    break
-            f.seek(0)
-            f.write("".join(content))
+    package = package.lower().replace("-","_")
+
+    updateVersion(package, version, path)
 
     os.system(
         " && ".join([
             f"cd {path}",               # Go to package folder folder
-            "python3 -m build --sdist", # Compacting package file
+            #"python3 -m build --sdist", # Compacting package file
+            "python3 setup.py sdist",   # Compacting package file
         ])
     )
 
     return None
 
 
-def uploadPackage(path, version):
-    "Upload module to PyPI repository"
+def updateVersion(package, version, path):
+    "Update version file "
 
-    # Check if module already exists in PyPI repository
-    exists()
+    files2Change = [
+        (f"{path}/setup.py", "VERSION = "),
+        (f"{path}/{package}.toml", "version = "),
+        (f"{path}/{package}/__init__.py", "__version__ = ")
+    ]
+
+    for file, toChange in files2Change:
+
+        with open(file, "r+") as f:
+            content = f.readlines()
+
+            for i, c in enumerate(content):
+
+                if toChange in c:
+                    pos = c.find('"')
+                    newVersionLine = c[:pos+1] + version + '"\n'
+
+                    if not newVersionLine.startswith(toChange):
+                        continue
+
+                    content[i] = newVersionLine
+
+                    break
+
+            input("".join(content))
+
+            f.seek(0)
+            f.write("".join(content))
+
+    return None
+
+
+def uploadPackage(package, path, version):
+    "Upload package to PyPI repository"
+
+    # Check if package already exists in PyPI repository
+    exists(package)
 
     out = os.system(
-        f"python3 -m twine upload {path}/dist/*{version}.tar.gz", #
+        f"python3 -m twine upload {path}/dist/*{version}.tar.gz",
     )
 
     return out
@@ -289,16 +498,23 @@ def removeCompactedFiles(path):
 
 
 def pyping(
-        module: str,
+        package: str,
         version: str,
         path: str,
         createAllFiles: bool = False
         ) -> (None):
+    global MAINTAINER_CHECK
+
+    MAINTAINER_CHECK = maintainerCheck(package)
+
+    if exists(package) and not MAINTAINER_CHECK:
+        print(f"\nUnfortunately, '{package}' already exists in the Pypi repository and you not in maintainer list.\n", file=sys.stderr)
+        return None
 
     if createAllFiles:
-        generateAllFiles(module, version, path)
-    buildProject(module, version, path)
-    uploadPackage(path)
+        generateAllFiles(package, path)
+    buildProject(package, version, path)
+    uploadPackage(package, path, version)
     removeCompactedFiles(path)
 
     return None

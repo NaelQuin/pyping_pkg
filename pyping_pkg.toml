@@ -1,23 +1,22 @@
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyping_pkg"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
-    %(lbrace)sname="Natanael Quintino", email="natanael.quintino@ipiaget.pt"%(rbrace)s,
+    { name="Natanael Quintino", email="natanael.quintino@ipiaget.pt" },
 ]
 description = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: {license}",
     "Operating System :: OS Independent",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/NaelQuin/pyping_pkg"
-"Bug Tracker" = "https://github.com/NaelQuin/pyping_pkg/issues"
+"Homepage" = "https://github.com/{githubUserName}/pyping_pkg"
+"Bug Tracker" = "https://github.com/{githubUserName}/pyping_pkg/issues"
