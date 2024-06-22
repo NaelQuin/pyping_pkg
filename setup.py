@@ -2,14 +2,14 @@
 from setuptools import setup, find_packages
 
 MODULE = "pyping_pkg"
-VERSION = "0.0.0"
+VERSION = "0.1.0"
 DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 LONG_DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 AUTHOR = "Natanael Quintino"
 AUTHOR_EMAIL = "natanael.quintino@ipiaget.pt"
 LICENSE = "MIT License"
 REQUIREMENTS = ""
-KEYWORDS = "PyPI, automation, pymodule, python package"
+KEYWORDS = "PyPI, automation, install, packages, module"
 
 setup(
     name=MODULE,

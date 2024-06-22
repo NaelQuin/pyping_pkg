@@ -11,7 +11,10 @@ Pyping_pkg
 Best regards from Natanael Quintino
 """
 
-__all__ = ["exists", "getVersions", "uploadProject"]
+__all__ = [
+    "exists", "getVersions", "uploadPackage", "pyping",
+    "buildProject"
+    ]
 
 import os
 import re
@@ -109,10 +112,10 @@ def generateToml(path) -> (None):
     with open("{path}/{module}.toml", "w") as f:
         f.write(
             tomlScript.format(
-                module=module, description=description, 
+                module=module, description=description,
                 author=author, author_email=author_email,
                 license=license, githubUserName=githubUserName
-            )
+            ) % {"lbrace": "{", "rbrace": "}"}
         )
 
     return None
@@ -166,29 +169,30 @@ def generateMitLicense(path) -> (None):
     return None
 
 
-def generateAllFiles(path):
+def generateAllFiles(module, version, path):
     """Generate setup.py, pymodule.toml, README.md and LICENSE files"""
 
-    while exists(module:=input("Type the pymodule name: "), verbose=True):
-        pass
-    description      = input("           description: ")
-    author           = input("           author name: ")
-    author_email     = input("          author email: ")
-    license          = input("               license: ")
-    requirements     = input(" packages requirements: ")
-    keywords         = input("              keywords: ")
-    githubUserName   = input("       github UserName: ")
+    while exists(module, verbose=True):
+        module=input("Type the pymodule name: ")
+    description      = input("Type the pymodule description: ")
+    author           = input("                  author name: ")
+    author_email     = input("                 author email: ")
+    license          = input("                      license: ")
+    requirements     = input("        packages requirements: ")
+    keywords         = input("                     keywords: ")
+    githubUserName   = input("              github UserName: ")
     long_description = description
 
     path = path.rstrip("/")
 
     for fileName in ["setup.py", f"{module}.toml", "README.md", "LICENSE"]:
+
         if fileName in os.listdir(path):
             print(f"'{fileName}' already exists!")
             answer = input(f"Do you wanna update '{fileName}'? (Y/n) ")
             if "n" in answer.lower():
                 continue
-            
+
         script = {
             "setup.py": setupScript,
             f"{module}.toml": tomlScript,
@@ -196,17 +200,23 @@ def generateAllFiles(path):
             "LICENSE": mitLicenseScript
         }[fileName]
 
-        from pyidebug import debug
-        debug(globals(), locals())
-        input("HERE")
+        # from pyidebug import debug
+        # debug(globals(), locals())
+        # input("HERE")
 
         with open(f"{path}/{fileName}", "w") as f:
-            f.write(
-                script.format(
+            # Formatting file text content
+            script = script.format(
                     module=module, description=description, long_description=long_description, author=author, author_email=author_email, license=license, requirements=requirements, keywords=keywords,
                     githubUserName=githubUserName
-                )
-            )
+                ) % {"lbrace": "{", "rbrace": "}"}
+
+            # Write content on file
+            f.write(script)
+
+            if fileName.endswith(".toml"):
+                # Make structural adjustments
+                script % {"lbrace": "{", "rbrace": "}"}
 
     return None
 
@@ -232,16 +242,16 @@ def buildProject(
         else path.rstrip(r"/")
 
     module = module.lower().replace("-","_")
-    for file in [f"{path}/setup.py",
-                 f"{path}/{module}.toml",
-                 f"{path}/{module}/__init__.py"]:
+    for file, toChange in [(f"{path}/setup.py", "VERSION = "),
+                 (f"{path}/{module}.toml", "version = "),
+                 (f"{path}/{module}/__init__.py", "__version__ = ")]:
         with open(file, "r+") as f:
             content = f.readlines()
             for i, c in enumerate(content):
-                if "VERSION = " in c or "version = " in c \
-                        or "__version__ = " in c:
+                if toChange in c:
                     pos = c.find('"')
                     content[i] = c[:pos+1] + version + '"\n'
+                    break
             f.seek(0)
             f.write("".join(content))
 
@@ -286,7 +296,7 @@ def pyping(
         ) -> (None):
 
     if createAllFiles:
-        generateAllFiles(path)
+        generateAllFiles(module, version, path)
     buildProject(module, version, path)
     uploadPackage(path)
     removeCompactedFiles(path)
