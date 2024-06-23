@@ -33,11 +33,69 @@ def prepareRequirements(requirements: str) -> (str):
     return ", ".join(requirements)
 
 
+def addVersion(file):
+
+    content = file.read()
+    check = '__version__ = ' in content
+
+    file.seek(0)
+
+    if not check:
+        pos = content.find("\ndef ")
+        if pos != -1:
+            content = content[:pos] + "\n__version__ = \"0.1.0\"\n" + content[pos:]
+            file.write(content)
+
+    return check
+
+
 def getKey(dic, key, func, *args):
     value = dic[key]\
         if key in dic\
         else func(*args)
     return value
+
+
+def packageNameSuggestion(package: str) -> (None):
+    global PACKAGE_NAME_TRY, HISTORY_NAMES
+
+    PACKAGE_NAME_TRY += 1
+    HISTORY_NAMES.append(package)
+
+    if PACKAGE_NAME_TRY == 3:
+        # namesSug = getNamesSuggestions(package)
+        # print(
+        #     f"\nMaybe you like one of these names? ({namesSug})\n"
+        #     )
+        namesSug = HISTORY_NAMES
+        print(
+            f"\nMaybe you can generate a combinarion of these names? ({namesSug})\n"
+            )
+    else:
+        print(
+            f"\nUnfortunately, '{package}' already exists.",
+            "Choose another name.\n",
+        )
+    return None
+
+
+def getNamesSuggestions(package: str) -> (str):
+    global HISTORY_NAMES
+
+    from pyai_comm import Copilot
+
+    answer = Copilot(os.environ["COPILOT_API_KEY"]).ask(
+        "Suggest me 3 names for my python package that nonexists on PyPI repository and considering the following names as inspiration: {'\''.join(HISTORY_NAMES)}. Give me your suggestions in a enumerated list.",
+        stream=False
+    )
+
+    names = answer.replace("\n\n", "\n")\
+                 .replace("1. ", "")\
+                 .replace("2. ", "")\
+                 .replace("3. ", "")\
+                 .split("\n")[1:-1]
+
+    return f"[{', '.join(names)}]"
 
 
 def getMaintainers(package: str) -> (bool):
@@ -58,9 +116,13 @@ def exists(package: str, verbose: bool = False) -> (bool):
 
     response = requests.get(f"https://pypi.org/project/{package}")
     unavailable = response.status_code == 200
-    if unavailable and verbose:
+    if MAINTAINER_CHECK and unavailable and verbose:
         print(
-        f"\nUnfortunately, '{package}' already exists in the Pypi repository. In following versions:\n\t{VERSIONS}\n"
+        f"\nUnfortunately, '{package}' already exists in the version. Choose another version different of these: {VERSIONS}\n"
+        )
+    elif unavailable and verbose:
+        print(
+        f"\nUnfortunately, '{package}' already exists in the Pypi repository."
         )
     elif verbose:
         print(
@@ -73,10 +135,11 @@ def exists(package: str, verbose: bool = False) -> (bool):
 def maintainerCheck(package: str) -> (bool):
     maintainers = getMaintainers(package)
 
-    answer = input(
-        f"You belong to the group of package maintainers? (y/N) ")
+    nickname = input(
+        f"\nWhat is your Gravatar nickname associated to this python package? "
+    )
 
-    output = answer.lower() == 'y'
+    output = nickname in maintainers
 
     return output
 
@@ -94,13 +157,19 @@ def getVersions(package) -> (list[str]):
     return versions
 
 
-def generateSetup(package, path) -> (None):
+def generateSetup(package, version, path) -> (None):
     """Generate setup.py file"""
 
     printed = False
-    while exists(package, verbose=True):
+    while exists(package, verbose=True) and not MAINTAINER_CHECK:
         package=input("Type the pypackage name: ")
         printed = True
+        packageNameSuggestion(package)
+
+    if version in VERSIONS and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in VERSIONS and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
+        updateVersion(package, version, path)
 
     if not printed:
         print("Type the pypackage ", end="")
@@ -165,13 +234,19 @@ def generateSetup(package, path) -> (None):
     return None
 
 
-def generateToml(package, path) -> (None):
+def generateToml(package, version, path) -> (None):
     """Generate <package>.toml file"""
 
     printed = False
-    while exists(package, verbose=True):
+    while exists(package, verbose=True) and not MAINTAINER_CHECK:
         package=input("Type the pypackage name: ")
         printed = True
+        packageNameSuggestion(package)
+
+    if version in VERSIONS and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in VERSIONS and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
+        updateVersion(package, version, path)
 
     if not printed:
         print("Type the pypackage ", end="")
@@ -228,13 +303,19 @@ def generateToml(package, path) -> (None):
     return None
 
 
-def generateReadme(package, path) -> (None):
+def generateReadme(package, version, path) -> (None):
     """Generate README.md file"""
 
     printed = False
-    while exists(package, verbose=True):
+    while exists(package, verbose=True) and not MAINTAINER_CHECK:
         package=input("Type the pypackage name: ")
         printed = True
+        packageNameSuggestion(package)
+
+    if version in VERSIONS and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in VERSIONS and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
+        updateVersion(package, version, path)
 
     if not printed:
         print("Type the pypackage ", end="")
@@ -264,7 +345,7 @@ def generateReadme(package, path) -> (None):
     return None
 
 
-def generateMitLicense(package, path) -> (None):
+def generateMitLicense(package, version, path) -> (None):
     """Generate LICENSE file"""
 
     author = getKey(
@@ -273,6 +354,11 @@ def generateMitLicense(package, path) -> (None):
         input,
         "Type the pypackage author name: "
     )
+
+    if version in VERSIONS and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in VERSIONS and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
+        updateVersion(package, version, path)
 
     path = path.rstrip("/")
 
@@ -292,15 +378,19 @@ def generateMitLicense(package, path) -> (None):
     return None
 
 
-def generateAllFiles(package, path):
+def generateAllFiles(package, version, path):
     """Generate setup.py, <package>.toml, README.md and LICENSE files"""
 
-    getVersions(package)
-
     printed = False
-    while exists(package, verbose=True):
+    while exists(package, verbose=True) and not MAINTAINER_CHECK:
         package=input("Type the pypackage name: ")
         printed = True
+        packageNameSuggestion(package)
+
+    if version in VERSIONS and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in VERSIONS and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
+        updateVersion(package, version, path)
 
     if not printed:
         print("Type the pypackage ", end="")
@@ -367,10 +457,6 @@ def generateAllFiles(package, path):
             "LICENSE": mitLicenseScript
         }[fileName]
 
-        # from pyidebug import debug
-        # debug(globals(), locals())
-        # input("HERE")
-
         with open(f"{path}/{fileName}", "w") as f:
 
             if fileName.endswith(".toml"):
@@ -397,7 +483,7 @@ def generateAllFiles(package, path):
                 script.strip("\t\n ")
             )
 
-    return None
+    return package, version
 
 
 def buildProject(
@@ -407,15 +493,16 @@ def buildProject(
         ) -> (None):
     global VERSIONS
 
-    if package is None or exists(package, verbose=True):
+    if package is None \
+            or (exists(package, verbose=True) and not MAINTAINER_CHECK):
         while exists(package:=input("Type the pypackage name: "), verbose=True):
-            pass
+            packageNameSuggestion(package)
     versions = getVersions(package)\
         if "VERSIONS" not in globals() or not any(VERSIONS)\
         else VERSIONS
-    if version is None or version in versions:
-        while (version:=input("Type the pypackage version: ").strip(" .")) in versions:
-            pass
+    if version is None or version in versions and MAINTAINER_CHECK:
+        while (version:=input("Type the pypackage version: ").strip(" .")) in versions and MAINTAINER_CHECK:
+            print(f"\nChoose another version that not exists in the versions list: {VERSIONS}\n")
         updateVersion(package, version, path)
     if path is None:
         path = input("Type the pypackage main path: ")
@@ -436,7 +523,7 @@ def buildProject(
         ])
     )
 
-    return None
+    return package, version
 
 
 def updateVersion(package, version, path):
@@ -451,7 +538,11 @@ def updateVersion(package, version, path):
     for file, toChange in files2Change:
 
         with open(file, "r+") as f:
-            content = f.readlines()
+
+            if toChange == "__version__ = " and not addVersion(f):
+                continue
+            else:
+                content = f.readlines()
 
             for i, c in enumerate(content):
 
@@ -466,7 +557,7 @@ def updateVersion(package, version, path):
 
                     break
 
-            input("".join(content))
+            # input("".join(content))
 
             f.seek(0)
             f.write("".join(content))
@@ -474,15 +565,16 @@ def updateVersion(package, version, path):
     return None
 
 
-def uploadPackage(package, path, version):
+def uploadPackage(package, version, path):
     "Upload package to PyPI repository"
 
     # Check if package already exists in PyPI repository
-    exists(package)
-
-    out = os.system(
-        f"python3 -m twine upload {path}/dist/*{version}.tar.gz",
-    )
+    if not exists(package) or MAINTAINER_CHECK:
+        out = os.system(
+            f"python3 -m twine upload {path}/dist/*{version}.tar.gz",
+        )
+    else:
+        out = None
 
     return out
 
@@ -503,18 +595,21 @@ def pyping(
         path: str,
         createAllFiles: bool = False
         ) -> (None):
-    global MAINTAINER_CHECK
+    global VERSIONS, MAINTAINER_CHECK, PACKAGE_NAME_TRY, HISTORY_NAMES
 
     MAINTAINER_CHECK = maintainerCheck(package)
+    VERSIONS = getVersions(package)
+    PACKAGE_NAME_TRY = 0
+    HISTORY_NAMES = []
 
     if exists(package) and not MAINTAINER_CHECK:
         print(f"\nUnfortunately, '{package}' already exists in the Pypi repository and you not in maintainer list.\n", file=sys.stderr)
         return None
 
     if createAllFiles:
-        generateAllFiles(package, path)
-    buildProject(package, version, path)
-    uploadPackage(package, path, version)
+        package, version = generateAllFiles(package, version, path)
+    package, version = buildProject(package, version, path)
+    uploadPackage(package, version, path)
     removeCompactedFiles(path)
 
     return None
