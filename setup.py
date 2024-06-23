@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 MODULE = "pyping_pkg"
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 LONG_DESCRIPTION = "Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions."
 AUTHOR = "Natanael Quintino"

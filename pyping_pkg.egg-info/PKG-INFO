@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pyping-pkg
-Version: 0.1.1
+Version: 0.2.0
 Summary: Pyping_pkg is a module used to check projects PyPi web site informations as if already exists and your respective versions.
 Home-page: UNKNOWN
 Author: Natanael Quintino
